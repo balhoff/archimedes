@@ -394,7 +394,47 @@ object OWLFunctionalSyntaxReader {
 
     def individual[_: P]: P[Individual] = P(iri.map(NamedIndividual) | anonymousIndividual)
 
-    //def dlSafeRule[_:P]: P[Unit] = P("DLSafeRule" ~ "(" ~ ")") //TODO
+    def dlSafeRule[_: P]: P[SWRLRule] = P(("DLSafeRule" ~ "(" ~ annotations ~ "Body" ~ "(" ~ atom.rep ~ ")" ~ "Head" ~ "(" ~ atom.rep ~ ")" ~ ")").map {
+      case (anns, body, head) => SWRLRule(body.toSet, head.toSet, anns.toSet)
+    })
+
+    def atom[_: P]: P[Atom] = P(classAtom | dataRangeAtom | objectPropertyAtom | dataPropertyAtom | builtInAtom | sameIndividualAtom | differentIndividualsAtom)
+
+    def individualVariable[_: P]: P[Variable] = P(("IndividualVariable" ~ "(" ~ iri ~ ")").map(Variable))
+
+    def literalVariable[_: P]: P[Variable] = P(("LiteralVariable" ~ "(" ~ iri ~ ")").map(Variable))
+
+    def iArg[_: P]: P[IArg] = P(individual | individualVariable)
+
+    def dArg[_: P]: P[DArg] = P(literal | literalVariable)
+
+    def classAtom[_: P]: P[ClassAtom] = P(("ClassAtom" ~ "(" ~ classExpression ~ iArg ~ ")").map {
+      case (cls, arg) => ClassAtom(cls, arg)
+    })
+
+    def dataRangeAtom[_: P]: P[DataRangeAtom] = P(("DataRangeAtom" ~ "(" ~ dataRange ~ dArg ~ ")").map {
+      case (dr, arg) => DataRangeAtom(dr, arg)
+    })
+
+    def objectPropertyAtom[_: P]: P[ObjectPropertyAtom] = P(("ObjectPropertyAtom" ~ "(" ~ objectPropertyExpression ~ iArg ~ iArg ~ ")").map {
+      case (prop, arg1, arg2) => ObjectPropertyAtom(prop, arg1, arg2)
+    })
+
+    def dataPropertyAtom[_: P]: P[DataPropertyAtom] = P(("DataPropertyAtom" ~ "(" ~ iri ~ iArg ~ dArg ~ ")").map {
+      case (prop, arg1, arg2) => DataPropertyAtom(DataProperty(prop), arg1, arg2)
+    })
+
+    def builtInAtom[_: P]: P[BuiltInAtom] = P(("BuiltInAtom" ~ "(" ~ iri ~ dArg.rep(1) ~ ")").map {
+      case (builtIn, args) => BuiltInAtom(builtIn, args.toList)
+    })
+
+    def sameIndividualAtom[_: P]: P[SameIndividualAtom] = P(("SameIndividualAtom" ~ "(" ~ iArg ~ iArg ~ ")").map {
+      case (arg1, arg2) => SameIndividualAtom(arg1, arg2)
+    })
+
+    def differentIndividualsAtom[_: P]: P[DifferentIndividualsAtom] = P(("DifferentIndividualsAtom" ~ "(" ~ iArg ~ iArg ~ ")").map {
+      case (arg1, arg2) => DifferentIndividualsAtom(arg1, arg2)
+    })
 
   }
 

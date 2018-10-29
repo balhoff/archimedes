@@ -8,7 +8,7 @@ final case class Ontology(id: Option[OntologyID], imports: Set[IRI], annotations
 
 sealed trait Entity
 
-sealed trait Individual
+sealed trait Individual extends IArg
 
 final case class NamedIndividual(iri: IRI) extends Individual with Entity
 
@@ -90,7 +90,7 @@ final case class DatatypeRestriction(datatype: Datatype, facetRestrictions: Set[
 
 final case class Datatype(iri: IRI) extends DataRange with Entity
 
-sealed trait Literal extends AnnotationValue
+sealed trait Literal extends AnnotationValue with DArg
 
 final case class TypedLiteral(lexicalForm: String, datatype: Datatype) extends Literal
 
@@ -118,7 +118,9 @@ final case class AnnotationPropertyDomain(property: AnnotationProperty, domain: 
 
 final case class AnnotationPropertyRange(property: AnnotationProperty, range: IRI, annotations: Set[Annotation] = Set.empty) extends AnnotationAxiom
 
-sealed trait ClassAxiom extends Axiom
+sealed trait LogicalAxiom extends Axiom
+
+sealed trait ClassAxiom extends LogicalAxiom
 
 final case class SubClassOf(subClass: ClassExpression, superClass: ClassExpression, annotations: Set[Annotation] = Set.empty) extends ClassAxiom
 
@@ -131,7 +133,7 @@ final case class DisjointClasses(expressions: Set[ClassExpression], annotations:
 // set of at least 2
 final case class DisjointUnion(namedClass: Class, expressions: Set[ClassExpression], annotations: Set[Annotation] = Set.empty) extends ClassAxiom
 
-sealed trait ObjectPropertyAxiom extends Axiom
+sealed trait ObjectPropertyAxiom extends LogicalAxiom
 
 sealed trait SubObjectPropertyExpression
 
@@ -166,7 +168,7 @@ final case class AsymmetricObjectProperty(property: ObjectPropertyExpression, an
 
 final case class TransitiveObjectProperty(property: ObjectPropertyExpression, annotations: Set[Annotation] = Set.empty) extends ObjectPropertyAxiom
 
-sealed trait DataPropertyAxiom extends Axiom
+sealed trait DataPropertyAxiom extends LogicalAxiom
 
 final case class SubDataPropertyOf(subProperty: DataProperty, superProperty: DataProperty, annotations: Set[Annotation] = Set.empty) extends DataPropertyAxiom
 
@@ -185,7 +187,7 @@ final case class DatatypeDefinition(datatype: Datatype, datarange: DataRange, an
 
 final case class HasKey(classExpression: ClassExpression, objectProperties: Set[ObjectPropertyExpression], dataProperties: Set[DataProperty], annotations: Set[Annotation] = Set.empty) extends Axiom
 
-sealed trait Assertion extends Axiom
+sealed trait Assertion extends LogicalAxiom
 
 // set of at least 2
 final case class SameIndividual(individuals: Set[Individual], annotations: Set[Annotation] = Set.empty) extends Assertion
@@ -202,3 +204,28 @@ final case class NegativeObjectPropertyAssertion(property: ObjectPropertyExpress
 final case class DataPropertyAssertion(property: DataProperty, source: Individual, value: Literal, annotations: Set[Annotation] = Set.empty) extends Assertion
 
 final case class NegativeDataPropertyAssertion(property: DataProperty, source: Individual, value: Literal, annotations: Set[Annotation] = Set.empty) extends Assertion
+
+final case class SWRLRule(body: Set[Atom], head: Set[Atom], annotations: Set[Annotation] = Set.empty) extends LogicalAxiom
+
+sealed trait Atom
+
+sealed trait IArg
+
+sealed trait DArg
+
+final case class Variable(iri: IRI) extends IArg with DArg
+
+final case class ClassAtom(predicate: ClassExpression, arg: IArg) extends Atom
+
+final case class ObjectPropertyAtom(predicate: ObjectPropertyExpression, source: IArg, target: IArg) extends Atom
+
+final case class SameIndividualAtom(first: IArg, second: IArg) extends Atom
+
+final case class DifferentIndividualsAtom(first: IArg, second: IArg) extends Atom
+
+final case class DataRangeAtom(predicate: DataRange, arg: DArg) extends Atom
+
+final case class DataPropertyAtom(predicate: DataProperty, source: IArg, value: DArg) extends Atom
+
+// one or more
+final case class BuiltInAtom(iri: IRI, arguments: List[DArg]) extends Atom

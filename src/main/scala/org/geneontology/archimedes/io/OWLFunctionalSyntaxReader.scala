@@ -48,7 +48,7 @@ object OWLFunctionalSyntaxReader {
 
   def prefixDeclaration[_: P]: P[PrefixDeclaration] = {
     import ScriptWhitespace._
-    P("Prefix" ~ "(" ~ PNAME_NS.! ~ "=" ~ fullIRI ~ ")").map {
+    P("Prefix" ~ "(" ~/ PNAME_NS.! ~ "=" ~ fullIRI ~ ")").map {
       case (prefix, expansion) => PrefixDeclaration(prefix, expansion)
     }
   }
@@ -98,14 +98,14 @@ object OWLFunctionalSyntaxReader {
 
     def directlyImportsDocuments[_: P]: P[Seq[IRI]] = P(("Import" ~ "(" ~ iri ~ ")").rep)
 
-    def ontology[_: P]: P[Ontology] = P((Start ~ prefixDeclaration.rep ~ "Ontology" ~ "(" ~
+    def ontology[_: P]: P[Ontology] = P((Start ~ prefixDeclaration.rep ~ "Ontology" ~ "(" ~/
       (iri ~ iri.?).? ~ directlyImportsDocuments ~ annotations ~ axioms ~ ")" ~ End).map {
       case (_, ontID, imps, anns, axs) =>
         val ontologyID = ontID.map(id => OntologyID(id._1, id._2))
         Ontology(ontologyID, imps.toSet, anns.toSet, axs.toSet)
     })
 
-    def annotation[_: P]: P[Annotation] = P("Annotation" ~ "(" ~ annotations ~ iri ~ annotationValue ~ ")").map {
+    def annotation[_: P]: P[Annotation] = P("Annotation" ~ "(" ~/ annotations ~ iri ~ annotationValue ~ ")").map {
       case (anns, prop, value) => Annotation(AnnotationProperty(prop), value, anns.toSet)
     }
 
@@ -127,9 +127,9 @@ object OWLFunctionalSyntaxReader {
     def axioms[_: P]: P[Seq[Axiom]] = P((declaration | classAxiom | objectPropertyAxiom | dataPropertyAxiom |
       datatypeDefinition | hasKey | assertion | annotationAxiom).rep)
 
-    def declaration[_: P]: P[Declaration] = P(("Declaration" ~ "(" ~ annotations ~ StringIn(
+    def declaration[_: P]: P[Declaration] = P(("Declaration" ~ "(" ~/ annotations ~ StringIn(
       "Class", "Datatype", "ObjectProperty", "DataProperty", "AnnotationProperty", "NamedIndividual").! ~
-      "(" ~ iri ~ ")" ~ ")").map {
+      "(" ~/ iri ~ ")" ~ ")").map {
       case (anns, kind, id) => kind match {
         case "Class"              => Declaration(Class(id), anns.toSet)
         case "Datatype"           => Declaration(Datatype(id), anns.toSet)
@@ -142,19 +142,19 @@ object OWLFunctionalSyntaxReader {
 
     def classAxiom[_: P]: P[ClassAxiom] = P(subClassOf | equivalentClasses | disjointClasses | disjointUnion)
 
-    def subClassOf[_: P]: P[SubClassOf] = P(("SubClassOf" ~ "(" ~ annotations ~ classExpression ~ classExpression ~ ")").map {
+    def subClassOf[_: P]: P[SubClassOf] = P(("SubClassOf" ~ "(" ~/ annotations ~ classExpression ~ classExpression ~ ")").map {
       case (anns, subExpression, superExpression) => SubClassOf(subExpression, superExpression, anns.toSet)
     })
 
-    def equivalentClasses[_: P]: P[EquivalentClasses] = P(("EquivalentClasses" ~ "(" ~ annotations ~ classExpression.rep(2) ~ ")").map {
+    def equivalentClasses[_: P]: P[EquivalentClasses] = P(("EquivalentClasses" ~ "(" ~/ annotations ~ classExpression.rep(2) ~ ")").map {
       case (anns, expressions) => EquivalentClasses(expressions.toSet, anns.toSet)
     })
 
-    def disjointClasses[_: P]: P[DisjointClasses] = P(("DisjointClasses" ~ "(" ~ annotations ~ classExpression.rep(2) ~ ")").map {
+    def disjointClasses[_: P]: P[DisjointClasses] = P(("DisjointClasses" ~ "(" ~/ annotations ~ classExpression.rep(2) ~ ")").map {
       case (anns, expressions) => DisjointClasses(expressions.toSet, anns.toSet)
     })
 
-    def disjointUnion[_: P]: P[DisjointUnion] = P(("DisjointUnion" ~ "(" ~ annotations ~ iri ~ classExpression.rep(2) ~ ")").map {
+    def disjointUnion[_: P]: P[DisjointUnion] = P(("DisjointUnion" ~ "(" ~/ annotations ~ iri ~ classExpression.rep(2) ~ ")").map {
       case (anns, cls, expressions) => DisjointUnion(Class(cls), expressions.toSet, anns.toSet)
     })
 
@@ -165,166 +165,166 @@ object OWLFunctionalSyntaxReader {
 
     def objectPropertyExpression[_: P]: P[ObjectPropertyExpression] = P(iri.map(ObjectProperty) | inverseObjectProperty)
 
-    def inverseObjectProperty[_: P]: P[ObjectInverseOf] = P(("ObjectInverseOf" ~ "(" ~ iri ~ ")").map(i => ObjectInverseOf(ObjectProperty(i))))
+    def inverseObjectProperty[_: P]: P[ObjectInverseOf] = P(("ObjectInverseOf" ~ "(" ~/ iri ~ ")").map(i => ObjectInverseOf(ObjectProperty(i))))
 
-    def propertyExpressionChain[_: P]: P[ObjectPropertyChain] = P(("ObjectPropertyChain" ~ "(" ~ objectPropertyExpression.rep(2) ~ ")").map {
+    def propertyExpressionChain[_: P]: P[ObjectPropertyChain] = P(("ObjectPropertyChain" ~ "(" ~/ objectPropertyExpression.rep(2) ~ ")").map {
       opes => ObjectPropertyChain(opes.toList)
     })
 
-    def subObjectPropertyOf[_: P]: P[SubObjectPropertyOf] = P(("SubObjectPropertyOf" ~ "(" ~ annotations ~
+    def subObjectPropertyOf[_: P]: P[SubObjectPropertyOf] = P(("SubObjectPropertyOf" ~ "(" ~/ annotations ~
       (objectPropertyExpression | propertyExpressionChain) ~ objectPropertyExpression ~ ")").map {
       case (anns, subProp, superProp) => SubObjectPropertyOf(subProp, superProp, anns.toSet)
     })
 
-    def equivalentObjectProperties[_: P]: P[EquivalentObjectProperties] = P(("EquivalentObjectProperties" ~ "(" ~ annotations ~ objectPropertyExpression.rep(2) ~ ")").map {
+    def equivalentObjectProperties[_: P]: P[EquivalentObjectProperties] = P(("EquivalentObjectProperties" ~ "(" ~/ annotations ~ objectPropertyExpression.rep(2) ~ ")").map {
       case (anns, properties) => EquivalentObjectProperties(properties.toSet, anns.toSet)
     })
 
-    def disjointObjectProperties[_: P]: P[DisjointObjectProperties] = P(("DisjointObjectProperties" ~ "(" ~ annotations ~ objectPropertyExpression.rep(2) ~ ")").map {
+    def disjointObjectProperties[_: P]: P[DisjointObjectProperties] = P(("DisjointObjectProperties" ~ "(" ~/ annotations ~ objectPropertyExpression.rep(2) ~ ")").map {
       case (anns, properties) => DisjointObjectProperties(properties.toSet, anns.toSet)
     })
 
-    def inverseObjectProperties[_: P]: P[InverseObjectProperties] = P(("InverseObjectProperties" ~ "(" ~ annotations ~ objectPropertyExpression ~ objectPropertyExpression ~ ")").map {
+    def inverseObjectProperties[_: P]: P[InverseObjectProperties] = P(("InverseObjectProperties" ~ "(" ~/ annotations ~ objectPropertyExpression ~ objectPropertyExpression ~ ")").map {
       case (anns, left, right) => InverseObjectProperties(left, right, anns.toSet)
     })
 
-    def objectPropertyDomain[_: P]: P[ObjectPropertyDomain] = P(("ObjectPropertyDomain" ~ "(" ~ annotations ~ objectPropertyExpression ~ classExpression ~ ")").map {
+    def objectPropertyDomain[_: P]: P[ObjectPropertyDomain] = P(("ObjectPropertyDomain" ~ "(" ~/ annotations ~ objectPropertyExpression ~ classExpression ~ ")").map {
       case (anns, prop, cls) => ObjectPropertyDomain(prop, cls, anns.toSet)
     })
 
-    def objectPropertyRange[_: P]: P[ObjectPropertyRange] = P(("ObjectPropertyRange" ~ "(" ~ annotations ~ objectPropertyExpression ~ classExpression ~ ")").map {
+    def objectPropertyRange[_: P]: P[ObjectPropertyRange] = P(("ObjectPropertyRange" ~ "(" ~/ annotations ~ objectPropertyExpression ~ classExpression ~ ")").map {
       case (anns, prop, cls) => ObjectPropertyRange(prop, cls, anns.toSet)
     })
 
-    def functionalObjectProperty[_: P]: P[FunctionalObjectProperty] = P(("FunctionalObjectProperty" ~ "(" ~ annotations ~ objectPropertyExpression ~ ")").map {
+    def functionalObjectProperty[_: P]: P[FunctionalObjectProperty] = P(("FunctionalObjectProperty" ~ "(" ~/ annotations ~ objectPropertyExpression ~ ")").map {
       case (anns, prop) => FunctionalObjectProperty(prop, anns.toSet)
     })
 
-    def inverseFunctionalObjectProperty[_: P]: P[InverseFunctionalObjectProperty] = P(("InverseFunctionalObjectProperty" ~ "(" ~ annotations ~ objectPropertyExpression ~ ")").map {
+    def inverseFunctionalObjectProperty[_: P]: P[InverseFunctionalObjectProperty] = P(("InverseFunctionalObjectProperty" ~ "(" ~/ annotations ~ objectPropertyExpression ~ ")").map {
       case (anns, prop) => InverseFunctionalObjectProperty(prop, anns.toSet)
     })
 
-    def reflexiveObjectProperty[_: P]: P[ReflexiveObjectProperty] = P(("ReflexiveObjectProperty" ~ "(" ~ annotations ~ objectPropertyExpression ~ ")").map {
+    def reflexiveObjectProperty[_: P]: P[ReflexiveObjectProperty] = P(("ReflexiveObjectProperty" ~ "(" ~/ annotations ~ objectPropertyExpression ~ ")").map {
       case (anns, prop) => ReflexiveObjectProperty(prop, anns.toSet)
     })
 
-    def irreflexiveObjectProperty[_: P]: P[IrreflexiveObjectProperty] = P(("IrreflexiveObjectProperty" ~ "(" ~ annotations ~ objectPropertyExpression ~ ")").map {
+    def irreflexiveObjectProperty[_: P]: P[IrreflexiveObjectProperty] = P(("IrreflexiveObjectProperty" ~ "(" ~/ annotations ~ objectPropertyExpression ~ ")").map {
       case (anns, prop) => IrreflexiveObjectProperty(prop, anns.toSet)
     })
 
-    def symmetricObjectProperty[_: P]: P[SymmetricObjectProperty] = P(("SymmetricObjectProperty" ~ "(" ~ annotations ~ objectPropertyExpression ~ ")").map {
+    def symmetricObjectProperty[_: P]: P[SymmetricObjectProperty] = P(("SymmetricObjectProperty" ~ "(" ~/ annotations ~ objectPropertyExpression ~ ")").map {
       case (anns, prop) => SymmetricObjectProperty(prop, anns.toSet)
     })
 
-    def asymmetricObjectProperty[_: P]: P[AsymmetricObjectProperty] = P(("AsymmetricObjectProperty" ~ "(" ~ annotations ~ objectPropertyExpression ~ ")").map {
+    def asymmetricObjectProperty[_: P]: P[AsymmetricObjectProperty] = P(("AsymmetricObjectProperty" ~ "(" ~/ annotations ~ objectPropertyExpression ~ ")").map {
       case (anns, prop) => AsymmetricObjectProperty(prop, anns.toSet)
     })
 
-    def transitiveObjectProperty[_: P]: P[TransitiveObjectProperty] = P(("TransitiveObjectProperty" ~ "(" ~ annotations ~ objectPropertyExpression ~ ")").map {
+    def transitiveObjectProperty[_: P]: P[TransitiveObjectProperty] = P(("TransitiveObjectProperty" ~ "(" ~/ annotations ~ objectPropertyExpression ~ ")").map {
       case (anns, prop) => TransitiveObjectProperty(prop, anns.toSet)
     })
 
     def dataPropertyAxiom[_: P]: P[DataPropertyAxiom] = P(subDataPropertyOf | equivalentDataProperties | disjointDataProperties |
       dataPropertyDomain | dataPropertyRange | functionalDataProperty)
 
-    def subDataPropertyOf[_: P]: P[SubDataPropertyOf] = P(("SubDataPropertyOf" ~ "(" ~ annotations ~ iri ~ iri ~ ")").map {
+    def subDataPropertyOf[_: P]: P[SubDataPropertyOf] = P(("SubDataPropertyOf" ~ "(" ~/ annotations ~ iri ~ iri ~ ")").map {
       case (anns, subProp, superProp) => SubDataPropertyOf(DataProperty(subProp), DataProperty(superProp), anns.toSet)
     })
 
-    def equivalentDataProperties[_: P]: P[EquivalentDataProperties] = P(("EquivalentDataProperties" ~ "(" ~ annotations ~ iri.rep(2) ~ ")").map {
+    def equivalentDataProperties[_: P]: P[EquivalentDataProperties] = P(("EquivalentDataProperties" ~ "(" ~/ annotations ~ iri.rep(2) ~ ")").map {
       case (anns, dps) => EquivalentDataProperties(dps.map(DataProperty).toSet, anns.toSet)
     })
 
-    def disjointDataProperties[_: P]: P[DisjointDataProperties] = P(("DisjointDataProperties" ~ "(" ~ annotations ~ iri.rep(2) ~ ")").map {
+    def disjointDataProperties[_: P]: P[DisjointDataProperties] = P(("DisjointDataProperties" ~ "(" ~/ annotations ~ iri.rep(2) ~ ")").map {
       case (anns, dps) => DisjointDataProperties(dps.map(DataProperty).toSet, anns.toSet)
     })
 
-    def dataPropertyDomain[_: P]: P[DataPropertyDomain] = P(("DataPropertyDomain" ~ "(" ~ annotations ~ iri ~ classExpression ~ ")").map {
+    def dataPropertyDomain[_: P]: P[DataPropertyDomain] = P(("DataPropertyDomain" ~ "(" ~/ annotations ~ iri ~ classExpression ~ ")").map {
       case (anns, dp, cls) => DataPropertyDomain(DataProperty(dp), cls, anns.toSet)
     })
 
-    def dataPropertyRange[_: P]: P[DataPropertyRange] = P(("DataPropertyRange" ~ "(" ~ annotations ~ iri ~ dataRange ~ ")").map {
+    def dataPropertyRange[_: P]: P[DataPropertyRange] = P(("DataPropertyRange" ~ "(" ~/ annotations ~ iri ~ dataRange ~ ")").map {
       case (anns, dp, range) => DataPropertyRange(DataProperty(dp), range, anns.toSet)
     })
 
-    def functionalDataProperty[_: P]: P[FunctionalDataProperty] = P(("FunctionalDataProperty" ~ "(" ~ annotations ~ iri ~ ")").map {
+    def functionalDataProperty[_: P]: P[FunctionalDataProperty] = P(("FunctionalDataProperty" ~ "(" ~/ annotations ~ iri ~ ")").map {
       case (anns, dp) => FunctionalDataProperty(DataProperty(dp), anns.toSet)
     })
 
-    def datatypeDefinition[_: P]: P[DatatypeDefinition] = P(("DatatypeDefinition" ~ "(" ~ annotations ~ iri ~ dataRange ~ ")").map {
+    def datatypeDefinition[_: P]: P[DatatypeDefinition] = P(("DatatypeDefinition" ~ "(" ~/ annotations ~ iri ~ dataRange ~ ")").map {
       case (anns, dt, dr) => DatatypeDefinition(Datatype(dt), dr, anns.toSet)
     })
 
     def dataRange[_: P]: P[DataRange] = P(iri.map(Datatype) | dataIntersectionOf | dataUnionOf | dataComplementOf | dataOneOf | datatypeRestriction)
 
-    def dataIntersectionOf[_: P]: P[DataIntersectionOf] = P(("DataIntersectionOf" ~ "(" ~ dataRange.rep(2) ~ ")").map {
+    def dataIntersectionOf[_: P]: P[DataIntersectionOf] = P(("DataIntersectionOf" ~ "(" ~/ dataRange.rep(2) ~ ")").map {
       drs => DataIntersectionOf(drs.toSet)
     })
 
-    def dataUnionOf[_: P]: P[DataUnionOf] = P(("DataUnionOf" ~ "(" ~ dataRange.rep(2) ~ ")").map {
+    def dataUnionOf[_: P]: P[DataUnionOf] = P(("DataUnionOf" ~ "(" ~/ dataRange.rep(2) ~ ")").map {
       drs => DataUnionOf(drs.toSet)
     })
 
-    def dataComplementOf[_: P]: P[DataComplementOf] = P(("DataComplementOf" ~ "(" ~ dataRange ~ ")").map(DataComplementOf))
+    def dataComplementOf[_: P]: P[DataComplementOf] = P(("DataComplementOf" ~ "(" ~/ dataRange ~ ")").map(DataComplementOf))
 
-    def dataOneOf[_: P]: P[DataOneOf] = P(("DataOneOf" ~ "(" ~ literal.rep(1) ~ ")").map(ls => DataOneOf(ls.toSet)))
+    def dataOneOf[_: P]: P[DataOneOf] = P(("DataOneOf" ~ "(" ~/ literal.rep(1) ~ ")").map(ls => DataOneOf(ls.toSet)))
 
-    def datatypeRestriction[_: P]: P[DatatypeRestriction] = P(("DatatypeRestriction" ~ "(" ~ iri ~ (iri ~ literal).rep(1) ~ ")").map {
+    def datatypeRestriction[_: P]: P[DatatypeRestriction] = P(("DatatypeRestriction" ~/ "(" ~ iri ~ (iri ~ literal).rep(1) ~ ")").map {
       case (dt, facetsValues) =>
         val facets = facetsValues.map { case (facet, value) => FacetRestriction(Facet(facet), value) }.toSet
         DatatypeRestriction(Datatype(dt), facets)
     })
 
-    def hasKey[_: P]: P[HasKey] = P(("HasKey" ~ "(" ~ annotations ~ classExpression ~ "(" ~ objectPropertyExpression.rep ~ ")" ~ "(" ~ iri.rep ~ ")" ~ ")").map {
+    def hasKey[_: P]: P[HasKey] = P(("HasKey" ~ "(" ~ annotations ~ classExpression ~ "(" ~/ objectPropertyExpression.rep ~ ")" ~ "(" ~ iri.rep ~ ")" ~ ")").map {
       case (anns, cls, ops, dps) => HasKey(cls, ops.toSet, dps.map(DataProperty).toSet, anns.toSet)
     })
 
     def assertion[_: P]: P[Assertion] = P(sameIndividual | differentIndividuals | classAssertion | objectPropertyAssertion |
       negativeObjectPropertyAssertion | dataPropertyAssertion | negativeDataPropertyAssertion)
 
-    def sameIndividual[_: P]: P[SameIndividual] = P(("SameIndividual" ~ "(" ~ annotations ~ individual.rep(2) ~ ")").map {
+    def sameIndividual[_: P]: P[SameIndividual] = P(("SameIndividual" ~ "(" ~/ annotations ~ individual.rep(2) ~ ")").map {
       case (anns, inds) => SameIndividual(inds.toSet, anns.toSet)
     })
 
-    def differentIndividuals[_: P]: P[DifferentIndividuals] = P(("DifferentIndividuals" ~ "(" ~ annotations ~ individual.rep(2) ~ ")").map {
+    def differentIndividuals[_: P]: P[DifferentIndividuals] = P(("DifferentIndividuals" ~ "(" ~/ annotations ~ individual.rep(2) ~ ")").map {
       case (anns, inds) => DifferentIndividuals(inds.toSet, anns.toSet)
     })
 
-    def classAssertion[_: P]: P[ClassAssertion] = P(("ClassAssertion" ~ "(" ~ annotations ~ classExpression ~ individual ~ ")").map {
+    def classAssertion[_: P]: P[ClassAssertion] = P(("ClassAssertion" ~ "(" ~/ annotations ~ classExpression ~ individual ~ ")").map {
       case (anns, cls, ind) => ClassAssertion(cls, ind, anns.toSet)
     })
 
-    def objectPropertyAssertion[_: P]: P[ObjectPropertyAssertion] = P(("ObjectPropertyAssertion" ~ "(" ~ annotations ~ objectPropertyExpression ~ individual ~ individual ~ ")").map {
+    def objectPropertyAssertion[_: P]: P[ObjectPropertyAssertion] = P(("ObjectPropertyAssertion" ~ "(" ~/ annotations ~ objectPropertyExpression ~ individual ~ individual ~ ")").map {
       case (anns, prop, source, target) => ObjectPropertyAssertion(prop, source, target, anns.toSet)
     })
 
-    def negativeObjectPropertyAssertion[_: P]: P[NegativeObjectPropertyAssertion] = P(("NegativeObjectPropertyAssertion" ~ "(" ~ annotations ~ objectPropertyExpression ~ individual ~ individual ~ ")").map {
+    def negativeObjectPropertyAssertion[_: P]: P[NegativeObjectPropertyAssertion] = P(("NegativeObjectPropertyAssertion" ~ "(" ~/ annotations ~ objectPropertyExpression ~ individual ~ individual ~ ")").map {
       case (anns, prop, source, target) => NegativeObjectPropertyAssertion(prop, source, target, anns.toSet)
     })
 
-    def dataPropertyAssertion[_: P]: P[DataPropertyAssertion] = P(("DataPropertyAssertion" ~ "(" ~ annotations ~ iri ~ individual ~ literal ~ ")").map {
+    def dataPropertyAssertion[_: P]: P[DataPropertyAssertion] = P(("DataPropertyAssertion" ~ "(" ~/ annotations ~ iri ~ individual ~ literal ~ ")").map {
       case (anns, prop, source, value) => DataPropertyAssertion(DataProperty(prop), source, value, anns.toSet)
     })
 
-    def negativeDataPropertyAssertion[_: P]: P[NegativeDataPropertyAssertion] = P(("NegativeDataPropertyAssertion" ~ "(" ~ annotations ~ iri ~ individual ~ literal ~ ")").map {
+    def negativeDataPropertyAssertion[_: P]: P[NegativeDataPropertyAssertion] = P(("NegativeDataPropertyAssertion" ~ "(" ~/ annotations ~ iri ~ individual ~ literal ~ ")").map {
       case (anns, prop, source, value) => NegativeDataPropertyAssertion(DataProperty(prop), source, value, anns.toSet)
     })
 
     def annotationAxiom[_: P]: P[AnnotationAxiom] = P(annotationAssertion | subAnnotationPropertyOf | annotationPropertyDomain | annotationPropertyRange)
 
-    def annotationAssertion[_: P]: P[AnnotationAssertion] = P(("AnnotationAssertion" ~ "(" ~ annotations ~ iri ~ annotationSubject ~ annotationValue ~ ")").map {
+    def annotationAssertion[_: P]: P[AnnotationAssertion] = P(("AnnotationAssertion" ~ "(" ~/ annotations ~ iri ~ annotationSubject ~ annotationValue ~ ")").map {
       case (anns, ap, subject, value) => AnnotationAssertion(AnnotationProperty(ap), subject, value, anns.toSet)
     })
 
-    def subAnnotationPropertyOf[_: P]: P[SubAnnotationPropertyOf] = P(("SubAnnotationPropertyOf" ~ "(" ~ annotations ~ iri ~ iri ~ ")").map {
+    def subAnnotationPropertyOf[_: P]: P[SubAnnotationPropertyOf] = P(("SubAnnotationPropertyOf" ~ "(" ~/ annotations ~ iri ~ iri ~ ")").map {
       case (anns, subProp, superProp) => SubAnnotationPropertyOf(AnnotationProperty(subProp), AnnotationProperty(superProp), anns.toSet)
     })
 
-    def annotationPropertyDomain[_: P]: P[AnnotationPropertyDomain] = P(("AnnotationPropertyDomain" ~ "(" ~ annotations ~ iri ~ iri ~ ")").map {
+    def annotationPropertyDomain[_: P]: P[AnnotationPropertyDomain] = P(("AnnotationPropertyDomain" ~ "(" ~/ annotations ~ iri ~ iri ~ ")").map {
       case (anns, prop, domain) => AnnotationPropertyDomain(AnnotationProperty(prop), domain, anns.toSet)
     })
 
-    def annotationPropertyRange[_: P]: P[AnnotationPropertyRange] = P(("AnnotationPropertyRange" ~ "(" ~ annotations ~ iri ~ iri ~ ")").map {
+    def annotationPropertyRange[_: P]: P[AnnotationPropertyRange] = P(("AnnotationPropertyRange" ~ "(" ~/ annotations ~ iri ~ iri ~ ")").map {
       case (anns, prop, range) => AnnotationPropertyRange(AnnotationProperty(prop), range, anns.toSet)
     })
 
@@ -332,107 +332,107 @@ object OWLFunctionalSyntaxReader {
       objectSomeValuesFrom | objectAllValuesFrom | objectHasValue | objectHasSelf | objectMinCardinality | objectMaxCardinality |
       objectExactCardinality | dataSomeValuesFrom | dataAllValuesFrom | dataHasValue | dataMinCardinality | dataMaxCardinality | dataExactCardinality)
 
-    def objectIntersectionOf[_: P]: P[ObjectIntersectionOf] = P(("ObjectIntersectionOf" ~ "(" ~ classExpression.rep(2) ~ ")")
+    def objectIntersectionOf[_: P]: P[ObjectIntersectionOf] = P(("ObjectIntersectionOf" ~ "(" ~/ classExpression.rep(2) ~ ")")
       .map(expressions => ObjectIntersectionOf(expressions.toSet)))
 
-    def objectUnionOf[_: P]: P[ObjectUnionOf] = P(("ObjectUnionOf" ~ "(" ~ classExpression.rep(2) ~ ")")
+    def objectUnionOf[_: P]: P[ObjectUnionOf] = P(("ObjectUnionOf" ~ "(" ~/ classExpression.rep(2) ~ ")")
       .map(expressions => ObjectUnionOf(expressions.toSet)))
 
-    def objectComplementOf[_: P]: P[ObjectComplementOf] = P(("ObjectComplementOf" ~ "(" ~ classExpression ~ ")").map(ObjectComplementOf))
+    def objectComplementOf[_: P]: P[ObjectComplementOf] = P(("ObjectComplementOf" ~ "(" ~/ classExpression ~ ")").map(ObjectComplementOf))
 
-    def objectOneOf[_: P]: P[ObjectOneOf] = P(("ObjectOneOf" ~ "(" ~ individual.rep(1) ~ ")").map(inds => ObjectOneOf(inds.toSet)))
+    def objectOneOf[_: P]: P[ObjectOneOf] = P(("ObjectOneOf" ~ "(" ~/ individual.rep(1) ~ ")").map(inds => ObjectOneOf(inds.toSet)))
 
-    def objectSomeValuesFrom[_: P]: P[ObjectSomeValuesFrom] = P(("ObjectSomeValuesFrom" ~ "(" ~ objectPropertyExpression ~ classExpression ~ ")").map {
+    def objectSomeValuesFrom[_: P]: P[ObjectSomeValuesFrom] = P(("ObjectSomeValuesFrom" ~/ "(" ~ objectPropertyExpression ~ classExpression ~ ")").map {
       case (prop, cls) => ObjectSomeValuesFrom(prop, cls)
     })
 
-    def objectAllValuesFrom[_: P]: P[ObjectAllValuesFrom] = P(("ObjectAllValuesFrom" ~ "(" ~ objectPropertyExpression ~ classExpression ~ ")").map {
+    def objectAllValuesFrom[_: P]: P[ObjectAllValuesFrom] = P(("ObjectAllValuesFrom" ~/ "(" ~ objectPropertyExpression ~ classExpression ~ ")").map {
       case (prop, cls) => ObjectAllValuesFrom(prop, cls)
     })
 
-    def objectHasValue[_: P]: P[ObjectHasValue] = P(("ObjectHasValue" ~ "(" ~ objectPropertyExpression ~ individual ~ ")").map {
+    def objectHasValue[_: P]: P[ObjectHasValue] = P(("ObjectHasValue" ~/ "(" ~ objectPropertyExpression ~ individual ~ ")").map {
       case (prop, ind) => ObjectHasValue(prop, ind)
     })
 
-    def objectHasSelf[_: P]: P[ObjectHasSelf] = P(("ObjectHasSelf" ~ "(" ~ objectPropertyExpression ~ ")").map(ObjectHasSelf))
+    def objectHasSelf[_: P]: P[ObjectHasSelf] = P(("ObjectHasSelf" ~ "(" ~/ objectPropertyExpression ~ ")").map(ObjectHasSelf))
 
-    def objectMinCardinality[_: P]: P[ObjectMinCardinality] = P(("ObjectMinCardinality" ~ "(" ~ nonNegNumber ~ objectPropertyExpression ~ classExpression.? ~ ")").map {
+    def objectMinCardinality[_: P]: P[ObjectMinCardinality] = P(("ObjectMinCardinality" ~/ "(" ~ nonNegNumber ~ objectPropertyExpression ~ classExpression.? ~ ")").map {
       case (card, prop, filler) => ObjectMinCardinality(card, prop, filler)
     })
 
-    def objectMaxCardinality[_: P]: P[ObjectMaxCardinality] = P(("ObjectMaxCardinality" ~ "(" ~ nonNegNumber ~ objectPropertyExpression ~ classExpression.? ~ ")").map {
+    def objectMaxCardinality[_: P]: P[ObjectMaxCardinality] = P(("ObjectMaxCardinality" ~/ "(" ~ nonNegNumber ~ objectPropertyExpression ~ classExpression.? ~ ")").map {
       case (card, prop, filler) => ObjectMaxCardinality(card, prop, filler)
     })
 
-    def objectExactCardinality[_: P]: P[ObjectExactCardinality] = P(("ObjectExactCardinality" ~ "(" ~ nonNegNumber ~ objectPropertyExpression ~ classExpression.? ~ ")").map {
+    def objectExactCardinality[_: P]: P[ObjectExactCardinality] = P(("ObjectExactCardinality" ~/ "(" ~ nonNegNumber ~ objectPropertyExpression ~ classExpression.? ~ ")").map {
       case (card, prop, filler) => ObjectExactCardinality(card, prop, filler)
     })
 
-    def dataSomeValuesFrom[_: P]: P[DataSomeValuesFrom] = P(("DataSomeValuesFrom" ~ "(" ~ iri.rep(1) ~ dataRange ~ ")").map {
+    def dataSomeValuesFrom[_: P]: P[DataSomeValuesFrom] = P(("DataSomeValuesFrom" ~ "(" ~/ iri.rep(1) ~ dataRange ~ ")").map {
       case (props, filler) => DataSomeValuesFrom(props.map(DataProperty).toList, filler)
     })
 
-    def dataAllValuesFrom[_: P]: P[DataAllValuesFrom] = P(("DataAllValuesFrom" ~ "(" ~ iri.rep(1) ~ dataRange ~ ")").map {
+    def dataAllValuesFrom[_: P]: P[DataAllValuesFrom] = P(("DataAllValuesFrom" ~ "(" ~/ iri.rep(1) ~ dataRange ~ ")").map {
       case (props, filler) => DataAllValuesFrom(props.map(DataProperty).toList, filler)
     })
 
-    def dataHasValue[_: P]: P[DataHasValue] = P(("DataHasValue" ~ "(" ~ iri ~ literal ~ ")").map {
+    def dataHasValue[_: P]: P[DataHasValue] = P(("DataHasValue" ~ "(" ~/ iri ~ literal ~ ")").map {
       case (prop, value) => DataHasValue(DataProperty(prop), value)
     })
 
-    def dataMinCardinality[_: P]: P[DataMinCardinality] = P(("DataMinCardinality" ~ "(" ~ nonNegNumber ~ iri ~ dataRange.? ~ ")").map {
+    def dataMinCardinality[_: P]: P[DataMinCardinality] = P(("DataMinCardinality" ~ "(" ~/ nonNegNumber ~ iri ~ dataRange.? ~ ")").map {
       case (card, prop, filler) => DataMinCardinality(card, DataProperty(prop), filler)
     })
 
-    def dataMaxCardinality[_: P]: P[DataMaxCardinality] = P(("DataMaxCardinality" ~ "(" ~ nonNegNumber ~ iri ~ dataRange.? ~ ")").map {
+    def dataMaxCardinality[_: P]: P[DataMaxCardinality] = P(("DataMaxCardinality" ~ "(" ~/ nonNegNumber ~ iri ~ dataRange.? ~ ")").map {
       case (card, prop, filler) => DataMaxCardinality(card, DataProperty(prop), filler)
     })
 
-    def dataExactCardinality[_: P]: P[DataExactCardinality] = P(("DataExactCardinality" ~ "(" ~ nonNegNumber ~ iri ~ dataRange.? ~ ")").map {
+    def dataExactCardinality[_: P]: P[DataExactCardinality] = P(("DataExactCardinality" ~ "(" ~/ nonNegNumber ~ iri ~ dataRange.? ~ ")").map {
       case (card, prop, filler) => DataExactCardinality(card, DataProperty(prop), filler)
     })
 
     def individual[_: P]: P[Individual] = P(iri.map(NamedIndividual) | anonymousIndividual)
 
-    def dlSafeRule[_: P]: P[SWRLRule] = P(("DLSafeRule" ~ "(" ~ annotations ~ "Body" ~ "(" ~ atom.rep ~ ")" ~ "Head" ~ "(" ~ atom.rep ~ ")" ~ ")").map {
+    def dlSafeRule[_: P]: P[SWRLRule] = P(("DLSafeRule" ~ "(" ~/ annotations ~ "Body" ~ "(" ~ atom.rep ~ ")" ~ "Head" ~ "(" ~ atom.rep ~ ")" ~ ")").map {
       case (anns, body, head) => SWRLRule(body.toSet, head.toSet, anns.toSet)
     })
 
     def atom[_: P]: P[Atom] = P(classAtom | dataRangeAtom | objectPropertyAtom | dataPropertyAtom | builtInAtom | sameIndividualAtom | differentIndividualsAtom)
 
-    def individualVariable[_: P]: P[Variable] = P(("IndividualVariable" ~ "(" ~ iri ~ ")").map(Variable))
+    def individualVariable[_: P]: P[Variable] = P(("IndividualVariable" ~ "(" ~/ iri ~ ")").map(Variable))
 
-    def literalVariable[_: P]: P[Variable] = P(("LiteralVariable" ~ "(" ~ iri ~ ")").map(Variable))
+    def literalVariable[_: P]: P[Variable] = P(("LiteralVariable" ~ "(" ~/ iri ~ ")").map(Variable))
 
     def iArg[_: P]: P[IArg] = P(individual | individualVariable)
 
     def dArg[_: P]: P[DArg] = P(literal | literalVariable)
 
-    def classAtom[_: P]: P[ClassAtom] = P(("ClassAtom" ~ "(" ~ classExpression ~ iArg ~ ")").map {
+    def classAtom[_: P]: P[ClassAtom] = P(("ClassAtom" ~ "(" ~/ classExpression ~ iArg ~ ")").map {
       case (cls, arg) => ClassAtom(cls, arg)
     })
 
-    def dataRangeAtom[_: P]: P[DataRangeAtom] = P(("DataRangeAtom" ~ "(" ~ dataRange ~ dArg ~ ")").map {
+    def dataRangeAtom[_: P]: P[DataRangeAtom] = P(("DataRangeAtom" ~ "(" ~/ dataRange ~ dArg ~ ")").map {
       case (dr, arg) => DataRangeAtom(dr, arg)
     })
 
-    def objectPropertyAtom[_: P]: P[ObjectPropertyAtom] = P(("ObjectPropertyAtom" ~ "(" ~ objectPropertyExpression ~ iArg ~ iArg ~ ")").map {
+    def objectPropertyAtom[_: P]: P[ObjectPropertyAtom] = P(("ObjectPropertyAtom" ~ "(" ~/ objectPropertyExpression ~ iArg ~ iArg ~ ")").map {
       case (prop, arg1, arg2) => ObjectPropertyAtom(prop, arg1, arg2)
     })
 
-    def dataPropertyAtom[_: P]: P[DataPropertyAtom] = P(("DataPropertyAtom" ~ "(" ~ iri ~ iArg ~ dArg ~ ")").map {
+    def dataPropertyAtom[_: P]: P[DataPropertyAtom] = P(("DataPropertyAtom" ~ "(" ~/ iri ~ iArg ~ dArg ~ ")").map {
       case (prop, arg1, arg2) => DataPropertyAtom(DataProperty(prop), arg1, arg2)
     })
 
-    def builtInAtom[_: P]: P[BuiltInAtom] = P(("BuiltInAtom" ~ "(" ~ iri ~ dArg.rep(1) ~ ")").map {
+    def builtInAtom[_: P]: P[BuiltInAtom] = P(("BuiltInAtom" ~ "(" ~/ iri ~ dArg.rep(1) ~ ")").map {
       case (builtIn, args) => BuiltInAtom(builtIn, args.toList)
     })
 
-    def sameIndividualAtom[_: P]: P[SameIndividualAtom] = P(("SameIndividualAtom" ~ "(" ~ iArg ~ iArg ~ ")").map {
+    def sameIndividualAtom[_: P]: P[SameIndividualAtom] = P(("SameIndividualAtom" ~ "(" ~/ iArg ~ iArg ~ ")").map {
       case (arg1, arg2) => SameIndividualAtom(arg1, arg2)
     })
 
-    def differentIndividualsAtom[_: P]: P[DifferentIndividualsAtom] = P(("DifferentIndividualsAtom" ~ "(" ~ iArg ~ iArg ~ ")").map {
+    def differentIndividualsAtom[_: P]: P[DifferentIndividualsAtom] = P(("DifferentIndividualsAtom" ~/ "(" ~ iArg ~ iArg ~ ")").map {
       case (arg1, arg2) => DifferentIndividualsAtom(arg1, arg2)
     })
 

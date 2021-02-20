@@ -3,8 +3,12 @@
 .idea
 .project
 .settings
+.bloop
+.metals
+.bsp/sbt.json
 bin
 catalog-v001.xml
 project/project
+project/metals.sbt
 project/target
 target

@@ -1,8 +1,7 @@
-organization := "org.geneontology"
 
-name := "archimedes"
+//name := "archimedes"
 
-version := "0.1-SNAPSHOT"
+//version := "0.1-SNAPSHOT"
 
 publishMavenStyle := true
 
@@ -14,28 +13,52 @@ publishTo := {
     Some("releases" at nexus + "service/local/staging/deploy/maven2")
 }
 
-publishArtifact in Test := false
-
 licenses := Seq("BSD-3-Clause" -> url("https://opensource.org/licenses/BSD-3-Clause"))
 
 homepage := Some(url("https://github.com/balhoff/archimedes"))
 
-scalaVersion := "2.12.7"
+lazy val commonSettings = Seq(
+  scalaVersion := "2.13.4",
+  scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8", "-Ypatmat-exhaust-depth", "off"),
+  scalacOptions in Test ++= Seq("-Yrangepos"),
+  publishArtifact in Test := false
+)
 
-scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
+lazy val root = project.in(file("."))
+  .settings(commonSettings)
+  .enablePlugins(ScalaJSPlugin)
+  .aggregate(archimedesJS, archimedesJVM)
+  .settings(
+    publish := {},
+    publishLocal := {}
+  )
 
-scalacOptions in Test ++= Seq("-Yrangepos")
+lazy val archimedes = crossProject(JSPlatform, JVMPlatform).in(file("."))
+  .settings(commonSettings)
+  .settings(
+    organization := "org.geneontology",
+    name := "archimedes",
+    version := "0.1-SNAPSHOT",
+    libraryDependencies ++= {
+      Seq(
+        "com.lihaoyi" %%% "fastparse" % "2.3.1",
+        "com.lihaoyi" %%% "utest"     % "0.7.7" % Test
+      )
+    }
+  )
+  .jvmSettings(
+    // Add JVM-specific settings here
+  )
+  .jsSettings(
+    // Add JS-specific settings here
+  )
+
+lazy val archimedesJVM = archimedes.jvm
+lazy val archimedesJS = archimedes.js
 
 testFrameworks += new TestFramework("utest.runner.Framework")
 
-fork in Test := true
-
-libraryDependencies ++= {
-  Seq(
-    "com.lihaoyi" %% "fastparse" % "2.0.4",
-    "com.lihaoyi" %% "utest" % "0.6.3" % Test
-  )
-}
+//fork in Test := true
 
 pomExtra := <scm>
   <url>git@github.com:balhoff/archimedes.git</url>
@@ -45,6 +68,6 @@ pomExtra := <scm>
     <developer>
       <id>balhoff</id>
       <name>Jim Balhoff</name>
-      <email>jim@balhoff.org</email>
+      <email>balhoff@renci.org</email>
     </developer>
   </developers>

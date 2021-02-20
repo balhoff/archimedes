@@ -3,8 +3,10 @@ package org.geneontology.archimedes.io
 import fastparse.ScriptWhitespace._
 import fastparse._
 import org.geneontology.archimedes.owl._
+import org.geneontology.archimedes.owl.OWLVocabulary.OWLThing
+import org.geneontology.archimedes.util.Sets.{NonEmptySet, PluralSet}
 
-object OWLFunctionalSyntaxReader {
+object OWLFunctionalSyntaxParser {
 
   case class PrefixDeclaration(prefix: String, expansion: IRI)
 
@@ -124,8 +126,10 @@ object OWLFunctionalSyntaxReader {
 
     def annotations[_: P]: P[Seq[Annotation]] = P(annotation.rep)
 
-    def axioms[_: P]: P[Seq[Axiom]] = P((declaration | classAxiom | objectPropertyAxiom | dataPropertyAxiom |
-      datatypeDefinition | hasKey | assertion | annotationAxiom).rep)
+    def axiom[_: P]: P[Axiom] = P(declaration | classAxiom | objectPropertyAxiom | dataPropertyAxiom |
+      datatypeDefinition | hasKey | assertion | annotationAxiom)
+
+    def axioms[_: P]: P[Seq[Axiom]] = P(axiom.rep)
 
     def declaration[_: P]: P[Declaration] = P(("Declaration" ~ "(" ~/ annotations ~ StringIn(
       "Class", "Datatype", "ObjectProperty", "DataProperty", "AnnotationProperty", "NamedIndividual").! ~
@@ -146,16 +150,16 @@ object OWLFunctionalSyntaxReader {
       case (anns, subExpression, superExpression) => SubClassOf(subExpression, superExpression, anns.toSet)
     })
 
-    def equivalentClasses[_: P]: P[EquivalentClasses] = P(("EquivalentClasses" ~ "(" ~/ annotations ~ classExpression.rep(2) ~ ")").map {
-      case (anns, expressions) => EquivalentClasses(expressions.toSet, anns.toSet)
+    def equivalentClasses[_: P]: P[EquivalentClasses] = P(("EquivalentClasses" ~ "(" ~/ annotations ~ classExpression.rep(2).map(_.to(Set)).filter(_.size > 1) ~ ")").map {
+      case (anns, expressions) => EquivalentClasses(PluralSet.create(expressions).getOrElse(throw new IllegalArgumentException), anns.toSet)
     })
 
-    def disjointClasses[_: P]: P[DisjointClasses] = P(("DisjointClasses" ~ "(" ~/ annotations ~ classExpression.rep(2) ~ ")").map {
-      case (anns, expressions) => DisjointClasses(expressions.toSet, anns.toSet)
+    def disjointClasses[_: P]: P[DisjointClasses] = P(("DisjointClasses" ~ "(" ~/ annotations ~ classExpression.rep(2).map(_.to(Set)).filter(_.size > 1) ~ ")").map {
+      case (anns, expressions) => DisjointClasses(PluralSet.create(expressions).getOrElse(throw new IllegalArgumentException), anns.toSet)
     })
 
-    def disjointUnion[_: P]: P[DisjointUnion] = P(("DisjointUnion" ~ "(" ~/ annotations ~ iri ~ classExpression.rep(2) ~ ")").map {
-      case (anns, cls, expressions) => DisjointUnion(Class(cls), expressions.toSet, anns.toSet)
+    def disjointUnion[_: P]: P[DisjointUnion] = P(("DisjointUnion" ~ "(" ~/ annotations ~ iri ~ classExpression.rep(2).map(_.to(Set)).filter(_.size > 1) ~ ")").map {
+      case (anns, cls, expressions) => DisjointUnion(Class(cls), PluralSet.create(expressions).getOrElse(throw new IllegalArgumentException), anns.toSet)
     })
 
     def objectPropertyAxiom[_: P]: P[ObjectPropertyAxiom] = P(subObjectPropertyOf | equivalentObjectProperties |
@@ -176,12 +180,12 @@ object OWLFunctionalSyntaxReader {
       case (anns, subProp, superProp) => SubObjectPropertyOf(subProp, superProp, anns.toSet)
     })
 
-    def equivalentObjectProperties[_: P]: P[EquivalentObjectProperties] = P(("EquivalentObjectProperties" ~ "(" ~/ annotations ~ objectPropertyExpression.rep(2) ~ ")").map {
-      case (anns, properties) => EquivalentObjectProperties(properties.toSet, anns.toSet)
+    def equivalentObjectProperties[_: P]: P[EquivalentObjectProperties] = P(("EquivalentObjectProperties" ~ "(" ~/ annotations ~ objectPropertyExpression.rep(2).map(_.to(Set)).filter(_.size > 1) ~ ")").map {
+      case (anns, properties) => EquivalentObjectProperties(PluralSet.create(properties).getOrElse(throw new IllegalArgumentException), anns.toSet)
     })
 
-    def disjointObjectProperties[_: P]: P[DisjointObjectProperties] = P(("DisjointObjectProperties" ~ "(" ~/ annotations ~ objectPropertyExpression.rep(2) ~ ")").map {
-      case (anns, properties) => DisjointObjectProperties(properties.toSet, anns.toSet)
+    def disjointObjectProperties[_: P]: P[DisjointObjectProperties] = P(("DisjointObjectProperties" ~ "(" ~/ annotations ~ objectPropertyExpression.rep(2).map(_.to(Set)).filter(_.size > 1) ~ ")").map {
+      case (anns, properties) => DisjointObjectProperties(PluralSet.create(properties).getOrElse(throw new IllegalArgumentException), anns.toSet)
     })
 
     def inverseObjectProperties[_: P]: P[InverseObjectProperties] = P(("InverseObjectProperties" ~ "(" ~/ annotations ~ objectPropertyExpression ~ objectPropertyExpression ~ ")").map {
@@ -231,12 +235,12 @@ object OWLFunctionalSyntaxReader {
       case (anns, subProp, superProp) => SubDataPropertyOf(DataProperty(subProp), DataProperty(superProp), anns.toSet)
     })
 
-    def equivalentDataProperties[_: P]: P[EquivalentDataProperties] = P(("EquivalentDataProperties" ~ "(" ~/ annotations ~ iri.rep(2) ~ ")").map {
-      case (anns, dps) => EquivalentDataProperties(dps.map(DataProperty).toSet, anns.toSet)
+    def equivalentDataProperties[_: P]: P[EquivalentDataProperties] = P(("EquivalentDataProperties" ~ "(" ~/ annotations ~ iri.rep(2).map(_.to(Set)).filter(_.size > 1) ~ ")").map {
+      case (anns, dps) => EquivalentDataProperties(PluralSet.create(dps.map(DataProperty)).getOrElse(throw new IllegalArgumentException), anns.toSet)
     })
 
-    def disjointDataProperties[_: P]: P[DisjointDataProperties] = P(("DisjointDataProperties" ~ "(" ~/ annotations ~ iri.rep(2) ~ ")").map {
-      case (anns, dps) => DisjointDataProperties(dps.map(DataProperty).toSet, anns.toSet)
+    def disjointDataProperties[_: P]: P[DisjointDataProperties] = P(("DisjointDataProperties" ~ "(" ~/ annotations ~ iri.rep(2).map(_.to(Set)).filter(_.size > 1) ~ ")").map {
+      case (anns, dps) => DisjointDataProperties(PluralSet.create(dps.map(DataProperty)).getOrElse(throw new IllegalArgumentException), anns.toSet)
     })
 
     def dataPropertyDomain[_: P]: P[DataPropertyDomain] = P(("DataPropertyDomain" ~ "(" ~/ annotations ~ iri ~ classExpression ~ ")").map {
@@ -257,22 +261,22 @@ object OWLFunctionalSyntaxReader {
 
     def dataRange[_: P]: P[DataRange] = P(iri.map(Datatype) | dataIntersectionOf | dataUnionOf | dataComplementOf | dataOneOf | datatypeRestriction)
 
-    def dataIntersectionOf[_: P]: P[DataIntersectionOf] = P(("DataIntersectionOf" ~ "(" ~/ dataRange.rep(2) ~ ")").map {
-      drs => DataIntersectionOf(drs.toSet)
+    def dataIntersectionOf[_: P]: P[DataIntersectionOf] = P(("DataIntersectionOf" ~ "(" ~/ dataRange.rep(2).map(_.to(Set)).filter(_.size > 1) ~ ")").map {
+      drs => DataIntersectionOf(PluralSet.create(drs).getOrElse(throw new IllegalArgumentException))
     })
 
-    def dataUnionOf[_: P]: P[DataUnionOf] = P(("DataUnionOf" ~ "(" ~/ dataRange.rep(2) ~ ")").map {
-      drs => DataUnionOf(drs.toSet)
+    def dataUnionOf[_: P]: P[DataUnionOf] = P(("DataUnionOf" ~ "(" ~/ dataRange.rep(2).map(_.to(Set)).filter(_.size > 1) ~ ")").map {
+      drs => DataUnionOf(PluralSet.create(drs).getOrElse(throw new IllegalArgumentException))
     })
 
     def dataComplementOf[_: P]: P[DataComplementOf] = P(("DataComplementOf" ~ "(" ~/ dataRange ~ ")").map(DataComplementOf))
 
-    def dataOneOf[_: P]: P[DataOneOf] = P(("DataOneOf" ~ "(" ~/ literal.rep(1) ~ ")").map(ls => DataOneOf(ls.toSet)))
+    def dataOneOf[_: P]: P[DataOneOf] = P(("DataOneOf" ~ "(" ~/ literal.rep(1).map(_.to(Set)) ~ ")").map(ls => DataOneOf(NonEmptySet.create(ls).getOrElse(throw new IllegalArgumentException))))
 
     def datatypeRestriction[_: P]: P[DatatypeRestriction] = P(("DatatypeRestriction" ~/ "(" ~ iri ~ (iri ~ literal).rep(1) ~ ")").map {
       case (dt, facetsValues) =>
-        val facets = facetsValues.map { case (facet, value) => FacetRestriction(Facet(facet), value) }.toSet
-        DatatypeRestriction(Datatype(dt), facets)
+        val facets = facetsValues.map { case (facet, value) => FacetRestriction(Facet(facet), value) }.to(Set)
+        DatatypeRestriction(Datatype(dt), NonEmptySet.create(facets).getOrElse(throw new IllegalArgumentException))
     })
 
     def hasKey[_: P]: P[HasKey] = P(("HasKey" ~ "(" ~ annotations ~ classExpression ~ "(" ~/ objectPropertyExpression.rep ~ ")" ~ "(" ~ iri.rep ~ ")" ~ ")").map {
@@ -282,12 +286,12 @@ object OWLFunctionalSyntaxReader {
     def assertion[_: P]: P[Assertion] = P(sameIndividual | differentIndividuals | classAssertion | objectPropertyAssertion |
       negativeObjectPropertyAssertion | dataPropertyAssertion | negativeDataPropertyAssertion)
 
-    def sameIndividual[_: P]: P[SameIndividual] = P(("SameIndividual" ~ "(" ~/ annotations ~ individual.rep(2) ~ ")").map {
-      case (anns, inds) => SameIndividual(inds.toSet, anns.toSet)
+    def sameIndividual[_: P]: P[SameIndividual] = P(("SameIndividual" ~ "(" ~/ annotations ~ individual.rep(2).map(_.to(Set)).filter(_.size > 1) ~ ")").map {
+      case (anns, inds) => SameIndividual(PluralSet.create(inds).getOrElse(throw new IllegalArgumentException), anns.toSet)
     })
 
-    def differentIndividuals[_: P]: P[DifferentIndividuals] = P(("DifferentIndividuals" ~ "(" ~/ annotations ~ individual.rep(2) ~ ")").map {
-      case (anns, inds) => DifferentIndividuals(inds.toSet, anns.toSet)
+    def differentIndividuals[_: P]: P[DifferentIndividuals] = P(("DifferentIndividuals" ~ "(" ~/ annotations ~ individual.rep(2).map(_.to(Set)).filter(_.size > 1) ~ ")").map {
+      case (anns, inds) => DifferentIndividuals(PluralSet.create(inds).getOrElse(throw new IllegalArgumentException), anns.toSet)
     })
 
     def classAssertion[_: P]: P[ClassAssertion] = P(("ClassAssertion" ~ "(" ~/ annotations ~ classExpression ~ individual ~ ")").map {
@@ -332,15 +336,16 @@ object OWLFunctionalSyntaxReader {
       objectSomeValuesFrom | objectAllValuesFrom | objectHasValue | objectHasSelf | objectMinCardinality | objectMaxCardinality |
       objectExactCardinality | dataSomeValuesFrom | dataAllValuesFrom | dataHasValue | dataMinCardinality | dataMaxCardinality | dataExactCardinality)
 
-    def objectIntersectionOf[_: P]: P[ObjectIntersectionOf] = P(("ObjectIntersectionOf" ~ "(" ~/ classExpression.rep(2) ~ ")")
-      .map(expressions => ObjectIntersectionOf(expressions.toSet)))
+    def objectIntersectionOf[_: P]: P[ObjectIntersectionOf] = P(("ObjectIntersectionOf" ~ "(" ~/ classExpression.rep(2).map(_.to(Set)).filter(_.size > 1) ~ ")")
+      .map(expressions => PluralSet.create(expressions.to(Set)).map(ObjectIntersectionOf).getOrElse(throw new IllegalArgumentException()))
+    )
 
-    def objectUnionOf[_: P]: P[ObjectUnionOf] = P(("ObjectUnionOf" ~ "(" ~/ classExpression.rep(2) ~ ")")
-      .map(expressions => ObjectUnionOf(expressions.toSet)))
+    def objectUnionOf[_: P]: P[ObjectUnionOf] = P(("ObjectUnionOf" ~ "(" ~/ classExpression.rep(2).map(_.to(Set)).filter(_.size > 1) ~ ")")
+      .map(expressions => ObjectUnionOf(PluralSet.create(expressions).getOrElse(throw new IllegalArgumentException))))
 
     def objectComplementOf[_: P]: P[ObjectComplementOf] = P(("ObjectComplementOf" ~ "(" ~/ classExpression ~ ")").map(ObjectComplementOf))
 
-    def objectOneOf[_: P]: P[ObjectOneOf] = P(("ObjectOneOf" ~ "(" ~/ individual.rep(1) ~ ")").map(inds => ObjectOneOf(inds.toSet)))
+    def objectOneOf[_: P]: P[ObjectOneOf] = P(("ObjectOneOf" ~ "(" ~/ individual.rep(1).map(_.to(Set)) ~ ")").map(inds => ObjectOneOf(NonEmptySet.create(inds).getOrElse(throw new IllegalArgumentException))))
 
     def objectSomeValuesFrom[_: P]: P[ObjectSomeValuesFrom] = P(("ObjectSomeValuesFrom" ~/ "(" ~ objectPropertyExpression ~ classExpression ~ ")").map {
       case (prop, cls) => ObjectSomeValuesFrom(prop, cls)
@@ -357,23 +362,23 @@ object OWLFunctionalSyntaxReader {
     def objectHasSelf[_: P]: P[ObjectHasSelf] = P(("ObjectHasSelf" ~ "(" ~/ objectPropertyExpression ~ ")").map(ObjectHasSelf))
 
     def objectMinCardinality[_: P]: P[ObjectMinCardinality] = P(("ObjectMinCardinality" ~/ "(" ~ nonNegNumber ~ objectPropertyExpression ~ classExpression.? ~ ")").map {
-      case (card, prop, filler) => ObjectMinCardinality(card, prop, filler)
+      case (card, prop, filler) => ObjectMinCardinality(card, prop, filler.getOrElse(OWLThing))
     })
 
     def objectMaxCardinality[_: P]: P[ObjectMaxCardinality] = P(("ObjectMaxCardinality" ~/ "(" ~ nonNegNumber ~ objectPropertyExpression ~ classExpression.? ~ ")").map {
-      case (card, prop, filler) => ObjectMaxCardinality(card, prop, filler)
+      case (card, prop, filler) => ObjectMaxCardinality(card, prop, filler.getOrElse(OWLThing))
     })
 
     def objectExactCardinality[_: P]: P[ObjectExactCardinality] = P(("ObjectExactCardinality" ~/ "(" ~ nonNegNumber ~ objectPropertyExpression ~ classExpression.? ~ ")").map {
-      case (card, prop, filler) => ObjectExactCardinality(card, prop, filler)
+      case (card, prop, filler) => ObjectExactCardinality(card, prop, filler.getOrElse(OWLThing))
     })
 
-    def dataSomeValuesFrom[_: P]: P[DataSomeValuesFrom] = P(("DataSomeValuesFrom" ~ "(" ~/ iri.rep(1) ~ dataRange ~ ")").map {
-      case (props, filler) => DataSomeValuesFrom(props.map(DataProperty).toList, filler)
+    def dataSomeValuesFrom[_: P]: P[DataSomeValuesFrom] = P(("DataSomeValuesFrom" ~ "(" ~/ iri ~ dataRange ~ ")").map {
+      case (prop, filler) => DataSomeValuesFrom(DataProperty(prop), filler)
     })
 
-    def dataAllValuesFrom[_: P]: P[DataAllValuesFrom] = P(("DataAllValuesFrom" ~ "(" ~/ iri.rep(1) ~ dataRange ~ ")").map {
-      case (props, filler) => DataAllValuesFrom(props.map(DataProperty).toList, filler)
+    def dataAllValuesFrom[_: P]: P[DataAllValuesFrom] = P(("DataAllValuesFrom" ~ "(" ~/ iri ~ dataRange ~ ")").map {
+      case (prop, filler) => DataAllValuesFrom(DataProperty(prop), filler)
     })
 
     def dataHasValue[_: P]: P[DataHasValue] = P(("DataHasValue" ~ "(" ~/ iri ~ literal ~ ")").map {

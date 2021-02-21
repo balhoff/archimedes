@@ -3,7 +3,7 @@ import scala.scalanative.build._
 lazy val commonSettings = Seq(
   organization := "org.geneontology",
   name := "archimedes",
-  version := "0.1-SNAPSHOT",
+  version := "0.1",
   homepage := Some(url("https://github.com/balhoff/archimedes")),
   licenses := Seq("BSD-3-Clause" -> url("https://opensource.org/licenses/BSD-3-Clause")),
   scalaVersion := "2.13.4",

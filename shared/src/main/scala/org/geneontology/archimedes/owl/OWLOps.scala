@@ -18,8 +18,8 @@ object OWLOps {
       case ObjectMaxCardinality(_, p, f)                => p.signature ++ f.signature
       case ObjectExactCardinality(_, p, f)              => p.signature ++ f.signature
       case ObjectInverseOf(p)                           => p.signature
-      case DataSomeValuesFrom(p, f)                    => p.signature ++ f.signature
-      case DataAllValuesFrom(p, f)                     => p.signature ++ f.signature
+      case DataSomeValuesFrom(p, f)                     => p.signature ++ f.signature
+      case DataAllValuesFrom(p, f)                      => p.signature ++ f.signature
       case DataIntersectionOf(drs)                      => drs.items.flatMap(_.signature)
       case DataUnionOf(drs)                             => drs.items.flatMap(_.signature)
       case DataComplementOf(dr)                         => dr.signature
@@ -59,13 +59,13 @@ object OWLOps {
       case SymmetricObjectProperty(p, as)               => p.signature ++ as.flatMap(_.signature)
       case AsymmetricObjectProperty(p, as)              => p.signature ++ as.flatMap(_.signature)
       case SubObjectPropertyOf(x, y, as)                => x.signature ++ y.signature ++ as.flatMap(_.signature)
-      case ObjectPropertyChain(ps)                      => ps.to(Set).flatMap(_.signature)
+      case ObjectPropertyChain(ps)                      => ps.toList.to(Set).flatMap(_.signature)
       case DataPropertyDomain(p, ce, as)                => p.signature ++ ce.signature ++ as.flatMap(_.signature)
       case DataPropertyRange(p, dr, as)                 => p.signature ++ dr.signature ++ as.flatMap(_.signature)
       case DisjointDataProperties(ps, as)               => ps.items.flatMap(_.signature) ++ as.flatMap(_.signature)
       case SubDataPropertyOf(x, y, as)                  => x.signature ++ y.signature ++ as.flatMap(_.signature)
       case SubAnnotationPropertyOf(x, y, as)            => x.signature ++ y.signature ++ as.flatMap(_.signature)
-      case SWRLRule(b, h, as)                           => b.flatMap(_.signature) ++ h.flatMap(_.signature) ++ as.flatMap(_.signature)
+      case DLSafeRule(b, h, as)                         => b.flatMap(_.signature) ++ h.flatMap(_.signature) ++ as.flatMap(_.signature)
       case BuiltInAtom(_, args)                         => args.flatMap(_.signature).to(Set)
       case ClassAtom(ce, arg)                           => ce.signature ++ arg.signature
       case DataRangeAtom(dr, arg)                       => dr.signature ++ arg.signature

@@ -1,6 +1,7 @@
 package org.geneontology.archimedes.owl
 
 import org.geneontology.archimedes.owl.OWLVocabulary._
+import org.geneontology.archimedes.util.Lists.PluralList
 import org.geneontology.archimedes.util.Sets.{NonEmptySet, PluralSet}
 
 import scala.collection.immutable.ListSet
@@ -178,8 +179,7 @@ sealed trait ObjectPropertyAxiom extends LogicalAxiom
 
 sealed trait SubObjectPropertyExpression extends OWLObject
 
-// list of at least 2
-final case class ObjectPropertyChain(properties: List[ObjectPropertyExpression]) extends SubObjectPropertyExpression
+final case class ObjectPropertyChain(properties: PluralList[ObjectPropertyExpression]) extends SubObjectPropertyExpression
 
 final case class SubObjectPropertyOf(subProperty: SubObjectPropertyExpression, superProperty: ObjectPropertyExpression, annotations: Set[Annotation] = Set.empty) extends ObjectPropertyAxiom
 
@@ -242,8 +242,8 @@ final case class DataPropertyAssertion(property: DataProperty, source: Individua
 
 final case class NegativeDataPropertyAssertion(property: DataProperty, source: Individual, value: Literal, annotations: Set[Annotation] = Set.empty) extends Assertion
 
-//TODO changeList or ListSet?
-final case class SWRLRule(body: Set[Atom], head: Set[Atom], annotations: Set[Annotation] = Set.empty) extends LogicalAxiom
+//TODO change to ListSet?
+final case class DLSafeRule(body: Set[Atom], head: Set[Atom], annotations: Set[Annotation] = Set.empty) extends LogicalAxiom
 
 sealed trait Atom extends OWLObject
 

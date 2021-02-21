@@ -4,9 +4,10 @@ import fastparse.ScriptWhitespace._
 import fastparse._
 import org.geneontology.archimedes.owl._
 import org.geneontology.archimedes.owl.OWLVocabulary.OWLThing
+import org.geneontology.archimedes.util.Lists.PluralList
 import org.geneontology.archimedes.util.Sets.{NonEmptySet, PluralSet}
 
-object OWLFunctionalSyntaxParser {
+private[io] object OWLFunctionalSyntaxParser {
 
   case class PrefixDeclaration(prefix: String, expansion: IRI)
 
@@ -127,7 +128,7 @@ object OWLFunctionalSyntaxParser {
     def annotations[_: P]: P[Seq[Annotation]] = P(annotation.rep)
 
     def axiom[_: P]: P[Axiom] = P(declaration | classAxiom | objectPropertyAxiom | dataPropertyAxiom |
-      datatypeDefinition | hasKey | assertion | annotationAxiom)
+      datatypeDefinition | hasKey | assertion | annotationAxiom | dlSafeRule)
 
     def axioms[_: P]: P[Seq[Axiom]] = P(axiom.rep)
 
@@ -172,7 +173,10 @@ object OWLFunctionalSyntaxParser {
     def inverseObjectProperty[_: P]: P[ObjectInverseOf] = P(("ObjectInverseOf" ~ "(" ~/ iri ~ ")").map(i => ObjectInverseOf(ObjectProperty(i))))
 
     def propertyExpressionChain[_: P]: P[ObjectPropertyChain] = P(("ObjectPropertyChain" ~ "(" ~/ objectPropertyExpression.rep(2) ~ ")").map {
-      opes => ObjectPropertyChain(opes.toList)
+      opes => opes.toList match {
+        case first :: second :: rest => ObjectPropertyChain(PluralList(first, second, rest))
+        case other => throw new IllegalArgumentException()
+      }
     })
 
     def subObjectPropertyOf[_: P]: P[SubObjectPropertyOf] = P(("SubObjectPropertyOf" ~ "(" ~/ annotations ~
@@ -399,19 +403,17 @@ object OWLFunctionalSyntaxParser {
 
     def individual[_: P]: P[Individual] = P(iri.map(NamedIndividual) | anonymousIndividual)
 
-    def dlSafeRule[_: P]: P[SWRLRule] = P(("DLSafeRule" ~ "(" ~/ annotations ~ "Body" ~ "(" ~ atom.rep ~ ")" ~ "Head" ~ "(" ~ atom.rep ~ ")" ~ ")").map {
-      case (anns, body, head) => SWRLRule(body.toSet, head.toSet, anns.toSet)
+    def dlSafeRule[_: P]: P[DLSafeRule] = P(("DLSafeRule" ~ "(" ~/ annotations ~ "Body" ~ "(" ~ atom.rep ~ ")" ~ "Head" ~ "(" ~ atom.rep ~ ")" ~ ")").map {
+      case (anns, body, head) => DLSafeRule(body.toSet, head.toSet, anns.toSet)
     })
 
     def atom[_: P]: P[Atom] = P(classAtom | dataRangeAtom | objectPropertyAtom | dataPropertyAtom | builtInAtom | sameIndividualAtom | differentIndividualsAtom)
 
-    def individualVariable[_: P]: P[Variable] = P(("IndividualVariable" ~ "(" ~/ iri ~ ")").map(Variable))
+    def variable[_: P]: P[Variable] = P(("Variable" ~ "(" ~/ iri ~ ")").map(Variable))
 
-    def literalVariable[_: P]: P[Variable] = P(("LiteralVariable" ~ "(" ~/ iri ~ ")").map(Variable))
+    def iArg[_: P]: P[IArg] = P(individual | variable)
 
-    def iArg[_: P]: P[IArg] = P(individual | individualVariable)
-
-    def dArg[_: P]: P[DArg] = P(literal | literalVariable)
+    def dArg[_: P]: P[DArg] = P(literal | variable)
 
     def classAtom[_: P]: P[ClassAtom] = P(("ClassAtom" ~ "(" ~/ classExpression ~ iArg ~ ")").map {
       case (cls, arg) => ClassAtom(cls, arg)

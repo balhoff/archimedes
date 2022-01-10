@@ -20,7 +20,7 @@ lazy val commonSettings = Seq(
   libraryDependencies ++= {
     Seq(
       "com.lihaoyi" %%% "fastparse" % "2.3.1",
-      "com.lihaoyi" %%% "utest" % "0.7.7" % Test
+      "com.lihaoyi" %%% "utest" % "0.7.10" % Test
     )
   },
   testFrameworks += new TestFramework("utest.runner.Framework")

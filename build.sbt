@@ -30,7 +30,7 @@ lazy val commonSettings = Seq(
     </developers>,
   libraryDependencies ++= {
     Seq(
-      "com.lihaoyi" %%% "fastparse" % "2.3.1",
+      "com.lihaoyi" %%% "fastparse" % "2.3.3",
       "com.lihaoyi" %%% "utest" % "0.7.11" % Test
     )
   },

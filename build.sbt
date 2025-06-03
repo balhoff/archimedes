@@ -8,7 +8,7 @@ lazy val commonSettings = Seq(
   licenses := Seq("BSD-3-Clause" -> url("https://opensource.org/licenses/BSD-3-Clause")),
   scalaVersion := "2.13.14",
   scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8", "-Ypatmat-exhaust-depth", "off"),
-  publishArtifact in Test := false,
+  (Test / publishArtifact) := false,
   publishMavenStyle := true,
   publishTo := {
     val nexus = "https://oss.sonatype.org/"
@@ -37,7 +37,7 @@ lazy val commonSettings = Seq(
   testFrameworks += new TestFramework("utest.runner.Framework")
 )
 
-lazy val archimedes = crossProject(JSPlatform, JVMPlatform, NativePlatform).in(file("."))
+lazy val archimedes = (file(".") / crossProject(JSPlatform, JVMPlatform, NativePlatform))
   .settings(commonSettings)
   .jsSettings()
   .jvmSettings()
